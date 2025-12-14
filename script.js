@@ -27,22 +27,9 @@ let moods = JSON.parse(localStorage.getItem("moods")) || [];
 let selectedMood = null;
 let chart = null;
 
-// Chat functionality
-let chatState = {
-  stage: 'greeting',
-  responses: {},
-  conversationComplete: false
-};
-
-const chatQuestions = {
-  greeting: "Hello! I'm your AI wellness companion. I'm here to check in on how you're doing. How are you feeling today?",
-  feelings: "Thank you for sharing. Can you tell me more about your emotions today? What's been on your mind?",
-  sleep: "How many hours did you sleep last night? Was it restful?",
-  habits: "What healthy habits have you practiced today? (exercise, meditation, reading, etc.)",
-  activities: "What activities did you do today? How did they make you feel?",
-  social: "Did you interact with friends, family, or colleagues today? How were those interactions?",
-  analysis: "Thank you for sharing all of this with me. Let me analyze how you're doing..."
-};
+// Gemini API Configuration
+const GEMINI_API_KEY = 'AIzaSyBaNJ1Evl6ggBpYD_O3h2UsO2GXEndPCVk';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -198,13 +185,7 @@ function updateStats() {
 // Chat functionality - no toggle needed since it's always visible
 
 function initChat() {
-  chatState = {
-    stage: 'greeting',
-    responses: {},
-    conversationComplete: false
-  };
-  
-  addBotMessage(chatQuestions.greeting);
+  addBotMessage("Hello! I'm your AI wellness companion and psychologist. I can see your mood tracking, sleep patterns, and activities. Tell me about your day and how you're feeling!");
 }
 
 function addBotMessage(message) {
@@ -249,7 +230,7 @@ function removeTypingIndicator() {
   }
 }
 
-function sendMessage() {
+async function sendMessage() {
   const input = document.getElementById('chatInput');
   const message = input.value.trim();
   
@@ -257,94 +238,126 @@ function sendMessage() {
   
   addUserMessage(message);
   input.value = '';
-  
-  // Process the message based on current stage
-  processUserResponse(message);
-}
-
-function processUserResponse(message) {
-  chatState.responses[chatState.stage] = message;
-  
   showTypingIndicator();
   
-  setTimeout(() => {
-    removeTypingIndicator();
+  try {
+    const context = getDashboardContext();
+    const prompt = createPsychologistPrompt(message, context);
     
-    switch (chatState.stage) {
-      case 'greeting':
-        chatState.stage = 'feelings';
-        addBotMessage(chatQuestions.feelings);
-        break;
-      case 'feelings':
-        chatState.stage = 'sleep';
-        addBotMessage(chatQuestions.sleep);
-        break;
-      case 'sleep':
-        chatState.stage = 'habits';
-        addBotMessage(chatQuestions.habits);
-        break;
-      case 'habits':
-        chatState.stage = 'activities';
-        addBotMessage(chatQuestions.activities);
-        break;
-      case 'activities':
-        chatState.stage = 'social';
-        addBotMessage(chatQuestions.social);
-        break;
-      case 'social':
-        chatState.stage = 'analysis';
-        addBotMessage(chatQuestions.analysis);
-        setTimeout(analyzeResponses, 2000);
-        break;
-      default:
-        if (!chatState.conversationComplete) {
-          addBotMessage("Thank you for sharing. Is there anything else you'd like to talk about?");
-        }
-    }
-  }, 1500);
-}
-
-function analyzeResponses() {
-  const responses = chatState.responses;
-  let analysis = "";
-  let encouragement = "";
-  
-  // Simple sentiment analysis based on keywords
-  const positiveWords = ['good', 'great', 'happy', 'excellent', 'wonderful', 'amazing', 'fantastic', 'love', 'enjoy', 'excited'];
-  const negativeWords = ['bad', 'terrible', 'sad', 'awful', 'hate', 'stressed', 'anxious', 'worried', 'tired', 'exhausted'];
-  
-  const allText = Object.values(responses).join(' ').toLowerCase();
-  const positiveCount = positiveWords.filter(word => allText.includes(word)).length;
-  const negativeCount = negativeWords.filter(word => allText.includes(word)).length;
-  
-  if (positiveCount > negativeCount) {
-    analysis = "Based on our conversation, it sounds like you're doing quite well! 🌟";
-    encouragement = "Keep up the great work! Your positive attitude and healthy habits are really showing. Remember to maintain this momentum and continue taking care of yourself. You're doing amazing! 💪✨";
-  } else if (negativeCount > positiveCount) {
-    analysis = "I can sense that you might be going through a challenging time right now. 💙";
-    encouragement = "Remember that it's completely normal to have difficult days, and you're not alone in this. Every small step you take towards self-care matters. Try to be gentle with yourself, focus on one positive thing each day, and remember that tomorrow is a new opportunity. You're stronger than you know! 🌈💪";
-  } else {
-    analysis = "It sounds like you're having a balanced day with both ups and downs. 🌤️";
-    encouragement = "Life has its natural rhythms, and it's perfectly okay to have mixed feelings. Keep focusing on the positive moments and don't be too hard on yourself during the challenging ones. You're doing great by taking time to reflect on your wellbeing! 🌟";
+    const response = await callGeminiAPI(prompt);
+    removeTypingIndicator();
+    addBotMessage(response);
+    parseActivitySuggestions(response);
+    
+  } catch (error) {
+    console.error('Error:', error);
+    removeTypingIndicator();
+    addBotMessage("I'm having trouble connecting right now. Please try again in a moment.");
   }
-  
-  showTypingIndicator();
-  
-  setTimeout(() => {
-    removeTypingIndicator();
-    addBotMessage(analysis);
-    
-    setTimeout(() => {
-      addBotMessage(encouragement);
-      
-      setTimeout(() => {
-        addBotMessage("To complete our session, I'd love to see a photo that represents how you're feeling right now. This will help me understand your emotional state better. Would you like to share one? 📸");
-        document.getElementById('photoUpload').style.display = 'block';
-        chatState.conversationComplete = true;
-      }, 2000);
-    }, 2000);
-  }, 2000);
 }
+
+function getDashboardContext() {
+  const weeklyMoods = moods.filter(m => {
+    const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    return m.timestamp > weekAgo;
+  });
+  
+  const average = weeklyMoods.length > 0 
+    ? (weeklyMoods.reduce((sum, m) => sum + m.value, 0) / weeklyMoods.length).toFixed(1)
+    : 0;
+  
+  const activities = JSON.parse(localStorage.getItem('suggestedActivities')) || [];
+  const sleepData = JSON.parse(localStorage.getItem('sleepData')) || mockSleepData;
+  
+  return {
+    recentMoods: moods.slice(-7).map(m => m.value),
+    weeklyMoodAverage: average,
+    sleepHours: sleepData,
+    completedActivities: activities.filter(a => a.count > 0),
+    totalMoodEntries: moods.length,
+    lastMood: moods.length > 0 ? moods[moods.length - 1] : null
+  };
+}
+
+function createPsychologistPrompt(userMessage, context) {
+  return `You are a professional psychologist AI assistant. Analyze the user's mental wellness data and respond empathetically.
+
+CURRENT USER DATA:
+- Recent mood scores (1-5): ${context.recentMoods.join(', ')}
+- Weekly mood average: ${context.weeklyMoodAverage}/5
+- Sleep hours this week: ${context.sleepHours.join(', ')} hours
+- Completed wellness activities: ${context.completedActivities.length}
+- Total mood entries: ${context.totalMoodEntries}
+- Last recorded mood: ${context.lastMood ? moodTexts[context.lastMood.value] : 'None'}
+
+USER MESSAGE: "${userMessage}"
+You will use the user DATA and MESSAGE to provide support and advice.
+Respond as a caring psychologist:
+1. Acknowledge their feelings
+2. Ask for more informations if needed
+3. Provide personalized advice
+4. Suggest 1-2 specific activities if needed
+5. Be encouraging and supportive
+
+Keep response conversational and under 150 words.`;
+}
+
+async function callGeminiAPI(prompt) {
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }]
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('API Response:', response.status, response.statusText);
+      throw new Error(`API Error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('API Response:', data);
+    
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+      return data.candidates[0].content.parts[0].text;
+    } else {
+      throw new Error('Invalid API response format');
+    }
+  } catch (error) {
+    console.error('Gemini API Error:', error);
+    throw error;
+  }
+}
+
+function parseActivitySuggestions(response) {
+  const activities = JSON.parse(localStorage.getItem('suggestedActivities')) || [];
+  const activityKeywords = ['try', 'suggest', 'recommend', 'consider', 'practice'];
+  
+  if (activityKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
+    if (response.toLowerCase().includes('breathing') && !activities.some(a => a.name.includes('breathing'))) {
+      activities.push({ id: Date.now(), name: "Deep breathing exercise", count: 0, lastDone: null });
+    }
+    if (response.toLowerCase().includes('walk') && !activities.some(a => a.name.includes('walk'))) {
+      activities.push({ id: Date.now(), name: "Take a mindful walk", count: 0, lastDone: null });
+    }
+    if (response.toLowerCase().includes('journal') && !activities.some(a => a.name.includes('journal'))) {
+      activities.push({ id: Date.now(), name: "Write in journal", count: 0, lastDone: null });
+    }
+    
+    localStorage.setItem('suggestedActivities', JSON.stringify(activities));
+    renderActivities();
+  }
+}
+
+
 
 function handleKeyPress(event) {
   if (event.key === 'Enter') {
