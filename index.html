@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mood Map Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🧠 Mood Map Dashboard</h1>
+
+    <div class="input-section">
+      <select id="moodSelect">
+        <option value="1">😢 Sad</option>
+        <option value="2">😕 Meh</option>
+        <option value="3">🙂 Okay</option>
+        <option value="4">😄 Happy</option>
+        <option value="5">🤩 Excited</option>
+      </select>
+      <button onclick="addMood()">Submit Mood</button>
+    </div>
+
+    <canvas id="moodChart"></canvas>
+
+    <div id="moodHistory"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  padding: 30px;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+}
+
+.input-section {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+#moodHistory div {
+  margin-top: 5px;
+  padding: 8px;
+  border-radius: 5px;
+}
