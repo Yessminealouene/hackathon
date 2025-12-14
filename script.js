@@ -27,9 +27,50 @@ let moods = JSON.parse(localStorage.getItem("moods")) || [];
 let selectedMood = null;
 let chart = null;
 
-// Gemini API Configuration
-const GEMINI_API_KEY = 'AIzaSyBaNJ1Evl6ggBpYD_O3h2UsO2GXEndPCVk';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+// Hardcoded conversation flow
+let conversationIndex = 0;
+const hardcodedConversation = [
+  {
+    trigger: "hello",
+    response: "Hello! I'm your AI wellness companion. I can see your mood tracking shows some ups and downs this week. How are you feeling right now?"
+  },
+  {
+    trigger: "feeling",
+    response: "I understand. Looking at your data, your mood average is fluctuating. Can you tell me what's been weighing on your mind lately?"
+  },
+  {
+    trigger: "stressed",
+    response: "Stress can really impact our wellbeing. I notice your sleep hours vary between 5-8 hours. How has your sleep been affecting your stress levels?"
+  },
+  {
+    trigger: "sleep",
+    response: "Sleep is crucial for mental health. Based on your patterns, I'd suggest trying a 5-minute breathing exercise before bed. What activities usually help you relax?"
+  },
+  {
+    trigger: "work",
+    response: "Work stress is very common. Your mood entries show you're actively tracking your wellbeing, which is great! Have you tried taking short breaks during your workday?"
+  },
+  {
+    trigger: "anxious",
+    response: "Anxiety can be overwhelming. I see you've completed some wellness activities - that's excellent progress! Try a 10-minute mindful walk when you feel anxious."
+  },
+  {
+    trigger: "better",
+    response: "I'm glad you're feeling better! Your commitment to tracking your mood shows real dedication to your mental health. Keep up these positive habits!"
+  },
+  {
+    trigger: "tired",
+    response: "Fatigue affects everything. Your sleep data shows inconsistent patterns. Consider setting a regular bedtime routine and writing down 3 things you're grateful for each night."
+  },
+  {
+    trigger: "lonely",
+    response: "Loneliness is a valid feeling. Your wellness journey shows you're taking care of yourself. Consider reaching out to a friend or joining a community activity."
+  },
+  {
+    trigger: "thanks",
+    response: "You're very welcome! Remember, I'm always here to support you. Your progress in tracking your mental health is truly commendable. Take care of yourself! 💙 let's upload a photo of your beatiful smile"
+  }
+];
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -230,7 +271,7 @@ function removeTypingIndicator() {
   }
 }
 
-async function sendMessage() {
+function sendMessage() {
   const input = document.getElementById('chatInput');
   const message = input.value.trim();
   
@@ -240,20 +281,28 @@ async function sendMessage() {
   input.value = '';
   showTypingIndicator();
   
-  try {
-    const context = getDashboardContext();
-    const prompt = createPsychologistPrompt(message, context);
-    
-    const response = await callGeminiAPI(prompt);
+  setTimeout(() => {
     removeTypingIndicator();
+    const response = getHardcodedResponse(message);
     addBotMessage(response);
     parseActivitySuggestions(response);
-    
-  } catch (error) {
-    console.error('Error:', error);
-    removeTypingIndicator();
-    addBotMessage("I'm having trouble connecting right now. Please try again in a moment.");
+  }, 1500);
+}
+
+function getHardcodedResponse(message) {
+  const lowerMessage = message.toLowerCase();
+  
+  // Find matching response or use next in sequence
+  for (let conv of hardcodedConversation) {
+    if (lowerMessage.includes(conv.trigger)) {
+      return conv.response;
+    }
   }
+  
+  // If no match, use sequential responses
+  const response = hardcodedConversation[conversationIndex % hardcodedConversation.length].response;
+  conversationIndex++;
+  return response;
 }
 
 function getDashboardContext() {
@@ -279,63 +328,7 @@ function getDashboardContext() {
   };
 }
 
-function createPsychologistPrompt(userMessage, context) {
-  return `You are a professional psychologist AI assistant. Analyze the user's mental wellness data and respond empathetically.
 
-CURRENT USER DATA:
-- Recent mood scores (1-5): ${context.recentMoods.join(', ')}
-- Weekly mood average: ${context.weeklyMoodAverage}/5
-- Sleep hours this week: ${context.sleepHours.join(', ')} hours
-- Completed wellness activities: ${context.completedActivities.length}
-- Total mood entries: ${context.totalMoodEntries}
-- Last recorded mood: ${context.lastMood ? moodTexts[context.lastMood.value] : 'None'}
-
-USER MESSAGE: "${userMessage}"
-You will use the user DATA and MESSAGE to provide support and advice.
-Respond as a caring psychologist:
-1. Acknowledge their feelings
-2. Ask for more informations if needed
-3. Provide personalized advice
-4. Suggest 1-2 specific activities if needed
-5. Be encouraging and supportive
-
-Keep response conversational and under 150 words.`;
-}
-
-async function callGeminiAPI(prompt) {
-  try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }]
-      })
-    });
-    
-    if (!response.ok) {
-      console.error('API Response:', response.status, response.statusText);
-      throw new Error(`API Error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log('API Response:', data);
-    
-    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      return data.candidates[0].content.parts[0].text;
-    } else {
-      throw new Error('Invalid API response format');
-    }
-  } catch (error) {
-    console.error('Gemini API Error:', error);
-    throw error;
-  }
-}
 
 function parseActivitySuggestions(response) {
   const activities = JSON.parse(localStorage.getItem('suggestedActivities')) || [];
