@@ -2,29 +2,103 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Mood Map Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mental Wellness Diary</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
+  <div class="app-container">
+    <!-- Left Side - Dashboard -->
+    <div class="left-panel">
+      <div class="header">
+        <h1><i class="fas fa-heart"></i> Mental Wellness Diary</h1>
+        <p>Track your mood and monitor your weekly progress</p>
+      </div>
 
-  <div class="container">
-    <h1>🧠 Mood Map Dashboard</h1>
+      <!-- Mood Selection Section -->
+      <div class="mood-section">
+        <h2><i class="fas fa-smile"></i> How are you feeling today?</h2>
+        <div class="mood-selector">
+          <div class="mood-options">
+            <button class="mood-btn" data-mood="1" onclick="selectMood(1)">😢<span>Very Sad</span></button>
+            <button class="mood-btn" data-mood="2" onclick="selectMood(2)">😕<span>Sad</span></button>
+            <button class="mood-btn" data-mood="3" onclick="selectMood(3)">😐<span>Neutral</span></button>
+            <button class="mood-btn" data-mood="4" onclick="selectMood(4)">😊<span>Happy</span></button>
+            <button class="mood-btn" data-mood="5" onclick="selectMood(5)">🤩<span>Excellent</span></button>
+          </div>
+          <button id="submitMood" class="submit-btn" onclick="addMood()" disabled>Submit Mood</button>
+        </div>
+      </div>
 
-    <div class="input-section">
-      <select id="moodSelect">
-        <option value="1">😢 Sad</option>
-        <option value="2">😕 Meh</option>
-        <option value="3">🙂 Okay</option>
-        <option value="4">😄 Happy</option>
-        <option value="5">🤩 Excited</option>
-      </select>
-      <button onclick="addMood()">Submit Mood</button>
+      <!-- Dashboard Section -->
+      <div class="dashboard-section">
+        <h2><i class="fas fa-chart-line"></i> Weekly Progress</h2>
+        <div class="chart-container">
+          <canvas id="moodChart"></canvas>
+        </div>
+        <div class="stats">
+          <div class="stat-card">
+            <i class="fas fa-calendar-week"></i>
+            <h3 id="weeklyAvg">0</h3>
+            <p>Weekly Average</p>
+          </div>
+          <div class="stat-card">
+            <i class="fas fa-trending-up"></i>
+            <h3 id="totalEntries">0</h3>
+            <p>Total Entries</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Moods -->
+      <div class="history-section">
+        <h2><i class="fas fa-history"></i> Recent Moods</h2>
+        <div id="moodHistory"></div>
+      </div>
+
+      <!-- Sleep Tracking -->
+      <div class="sleep-section">
+        <h2><i class="fas fa-bed"></i> Weekly Sleep Hours</h2>
+        <div class="chart-container">
+          <canvas id="sleepChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Suggested Activities -->
+      <div class="activities-section">
+        <h2><i class="fas fa-lightbulb"></i> Suggested Activities</h2>
+        <p class="activities-description">Personalized wellness activities based on your mental state</p>
+        <div id="activitiesList"></div>
+      </div>
+
+      <!-- Therapy Session Album -->
+      <div class="album-section">
+        <h2><i class="fas fa-camera"></i> Therapy Session Album</h2>
+        <p class="album-description">Your photo memories from each wellness conversation</p>
+        <div id="sessionAlbum" class="album-grid"></div>
+      </div>
     </div>
 
-    <canvas id="moodChart"></canvas>
-
-    <div id="moodHistory"></div>
+    <!-- Right Side - Chat -->
+    <div class="right-panel">
+      <div class="chat-container">
+        <div class="chat-header">
+          <h3><i class="fas fa-robot"></i> AI Wellness Companion</h3>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-section">
+          <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+          <button onclick="sendMessage()" class="send-btn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div id="photoUpload" class="photo-upload" style="display: none;">
+          <h4>Share a photo to help me understand how you're feeling</h4>
+          <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoUpload()">
+          <div id="photoPreview"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="script.js"></script>
